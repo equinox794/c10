@@ -1,0 +1,132 @@
+# -- PROJE GENEL BİLGİSİ --
+# Bu proje; tek kullanıcıya yönelik küçük ölçekli bir CRM/ERP uygulamasıdır.
+# Modüller: Stok, Cari, Sipariş & Teklif, Reçete (NPK Formülasyon), Ayarlar.
+# Veritabanı: SQLite (tek dosya, "database.sqlite").
+# Teknolojiler: Node.js (Express), Next.js (React), Tailwind CSS, vb.
+# Yaklaşık 1000 kayda kadar performansı yeterlidir.
+# Giriş (login) veya rol yönetimi yoktur. Basit Node server ve direct port (3001) kullanılır.
+
+##############################################################################
+# Cursor Proje Kuralları, Terminal Yönetimi ve Proje Bilgileri
+##############################################################################
+
+##############################################################################
+# 1) Genel Proje Kuralları
+1. Tüm kaynak kod, tutarlı bir klasör yapısında saklanmalıdır. Örnek:
+   - backend/ (server.js, database.sqlite)
+   - frontend/ (Next.js dosyaları)
+   - Diğer (README.md, backup script vb.)
+2. "database.sqlite" (ve yedekleri) .gitignore içinde bulunabilir; 
+   üretim ortamındaki hassas veri kaybını engellemek için dikkatli yönetilmelidir.
+3. Kod yazarken "tek kullanıcı" senaryosunu unutma:
+   - Gereksiz çoklu kullanıcı veya auth modülü eklenmemelidir.
+4. Ana modüller: 
+   - Dashboard (özet görünüm)
+   - Stok (ürün/hammadde takibi)
+   - Cari (borç/alacak, vade takip)
+   - Reçete & Formülasyon (NPK, maliyet hesaplama)
+   - Sipariş & Teklif
+   - Ayarlar (firma bilgisi, ambalaj listesi, vb.)
+5. Hata yönetim prensiplerine (try-catch, optional chaining, tip kontrolü) bağlı kalınmalı; 
+   hatalar log dosyasına veya terminale açıklayıcı şekilde düşmelidir.
+
+##############################################################################
+# 2) Veritabanı Kullanımı ve Kontrol Adımları
+1. Cursor üzerinden proje başlatıldığında, veritabanı işlemlerinden önce 
+   "database.sqlite" dosyasının varlığı ve erişilebilirliği kontrol edilmelidir.
+   - Eğer dosya yoksa ya oluşturulur (ilk kurulum aşaması) ya da hata mesajı verilir.
+2. Tabloların (customers, stock, orders, recipes, transactions vb.) 
+   mevcut olup olmadığı, şema sürümü (migration) gerekliyse sistematik şekilde kontrol edilmelidir. 
+   - "Deneme-yanılma" yaklaşımı yerine "CREATE TABLE IF NOT EXISTS ..." gibi adımlar 
+     veya migration mekanizması kullanılmalıdır.
+3. Otomatik hesaplamalar için trigger kullanılıyorsa (sipariş tutarı, müşteri bakiyesi, vb.), 
+   SQLite'ta PRAGMA foreign_keys ve trigger tanımları doğru yapılandırılmalıdır.
+4. Veri bütünlüğü sorunu oluşursa (ör. foreign key hataları), 
+   hataları logs/crm_errors.log dosyasına kaydederek incele, 
+   "deneme-yanılma" yerine sistematik olarak tablo yapıları ve veri ilişkilerini kontrol et.
+
+##############################################################################
+# 3) Terminal Yönetimi (Cursor Özel)
+1. Cursor yeni bir terminal penceresi açmadan önce, önceden açık bir terminal varsa otomatik olarak KAPATMALIDIR.
+   - Aynı anda birden fazla terminalin üst üste binmesi istenmiyor.
+2. Proje boyunca sadece **bir** adet Cursor terminali açık olsun. 
+   Gerekirse eski terminal kapatılmadan yenisi açılmasın.
+3. Terminalin varsayılan çalıştırma komutları net tanımlanmalıdır:
+   - Backend: "node server.js" (veya "npm run backend") 
+   - Frontend: "npm run dev" (Next.js)
+4. Terminal kapatılmadan önce Node.js süreçleri "Ctrl + C" veya uygun bir stop komutu ile sonlandırılmalıdır. 
+   PM2 vb. process yöneticisi kullanılıyorsa, temiz çıkış yapmak zorunludur.
+5. Windows PowerShell'de && operatörü çalışmıyor. Onun yerine PowerShell'de komutları ; (noktalı virgül) ile ayırmalıyız.
+   Örnek: "cd backend; npm install" şeklinde kullanılmalıdır.
+6. Frontend ve backend zaten çalışıyorsa gereksiz yere yeniden başlatma! 
+   Eğer gerçekten yeniden başlatman gerekiyorsa şu komutu kullan:
+   Start-Process powershell -ArgumentList "cd C:\cursor\c9\backend; node server.js"; 
+   Start-Process powershell -ArgumentList "cd C:\cursor\c9\frontend; npm run dev"
+
+##############################################################################
+# 4) Developer Mode (Geliştirici Modu) ve Reload
+1. Developer Mode açık olduğunda Cursor, otomatik re-build veya reload işlemi yaparak 
+   sürekli terminal aç/kapa ihtiyacını en aza indirmelidir.
+2. Eğer Developer Mode kapalı ise, değişiklikler için manuel olarak terminali durdurup yeniden başlatmak gerekir. 
+   (örn. "Ctrl + C" sonrası tekrar "npm run dev")
+3. Developer Mode'a geçiş, Cursor içindeki bir ayar menüsünden yapılmalı 
+   ve Cursor yeniden başlatıldığında bu ayar hatırlanmalıdır.
+4. "Reload" komutu verildiğinde aynı terminal içinde proje derleyip çalıştır; 
+   yeni bir terminal penceresi açma. Bu sayede kesintisiz geliştirme deneyimi sağlanır.
+
+##############################################################################
+# 5) Kod Düzeni ve Formatlama
+1. Kod formatlama (Prettier, ESLint, EditorConfig) projeye uygun şekilde aktif tutulmalıdır.
+2. Fonksiyonlar, bileşenler vb. küçük parçalara bölünerek yönetilir; 
+   gereksiz uzun tek dosyalar oluşturulmamalıdır.
+3. İsimlendirme kuralları:
+   - Değişkenler ve fonksiyonlar: camelCase
+   - React Bileşenleri: PascalCase
+   - Klasör ve dosyalar: proje ekibi tarafından belirlenen sabit yazım şekli (örn. kebab-case)
+
+##############################################################################
+# 6) Hata Yönetimi
+1. Hata yönetiminde sistematik yaklaşım:
+   - Hata kodlarını (örn. HTTP 400, 404, 500) doğru şekilde dön.
+   - "Deneme yanılma" yaklaşımı yerine log kaydı ve debug çıktılarını incele, 
+     tablo yapıları ve veritabanı sorgularını kontrol et.
+2. Frontend tarafında React Error Boundary veya benzeri mekanizmalarla kritik hatalar yakalanmalı, 
+   kullanıcıya anlaşılır mesaj gösterilmeli.
+3. Tüm beklenmedik hatalar `logs/crm_errors.log` (veya benzer) dosyasına kaydedilebilir.
+
+##############################################################################
+# 7) Test ve Senaryolar
+1. Veri ekleme/silme/güncelleme (CRUD) işlemleri, her modül için en az bir temel senaryo ile test edilmelidir.
+2. Excel Import/Export özelliğinde:
+   - Boş hücreler, yanlış format, büyük dosyalar senaryoları test edilmelidir.
+3. Vade takip, kritik stok seviyesi, reçete maliyeti gibi otomatik hesaplama noktalarında 
+   "gerçekçi" örneklerle test yap (deneme-yanılma yerine planlı test: min. 2-3 test case).
+
+##############################################################################
+# 8) Yedekleme ve Sürümleme
+1. "database.sqlite" dosyası düzenli aralıklarla "backup/database_YYYYMMDDHHmm.sqlite" formatında kopyalanmalıdır.
+2. Büyük bir geliştirme öncesi manuel veya otomatik yedek alma (cron job) önerilir.
+3. Git kullanılıyorsa, her önemli güncelleme için yeni branch açmak ve test sonrası ana branch'e merge etmek iyi pratiktir.
+
+##############################################################################
+# 9) Geliştirme ve İletişim
+1. Yeni özellik veya önemli güncellemeler (örn. modül ekleme, tablo değişimi) 
+   README.md veya CHANGELOG.md üzerinde not edilmelidir.
+2. Ekip içi iletişimde (Slack, Teams, Jira vb.), tam olarak hangi tabloda veya hangi endpoint'te sorun yaşandığı belirtilmeli.
+3. Proje "tek klasör" prensibine yakın kalsa dahi, istenirse "frontend/" ve "backend/" klasörleriyle hafif modülerlik sağlanabilir.
+
+##############################################################################
+# 10) Son Not
+1. Bu proje küçük ölçekli ve tek kullanıcıya özel tasarlandığı için 
+   gereksiz karmaşık çözümlerden kaçınılmalıdır.
+2. Terminal aç/kapat, developer mode, reload gibi konularda Cursor'un 
+   en güncel özellikleri dikkate alınmalıdır.
+3. Herhangi bir hata durumunda "önce tablo yapısını ve veriyi kontrol et, 
+   sistematik log incelemesi yap, ardından düzeltici adımı uygula" prensibini unutma.
+4. Proje büyür veya çok kullanıcıya genişlerse (ör. ek rollere ihtiyaç duyulursa), 
+   bu kurallar revize edilebilir.
+
+##############################################################################
+# Bu .cursorules, Cursor ortamında proje geliştirmeyi kolaylaştırmak ve 
+# hem veritabanı hem de terminal yönetiminde sistematik yaklaşımı korumak için yazılmıştır.
+############################################################################## 

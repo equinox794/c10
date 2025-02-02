@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>BioPlant Teklif Formu</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Open Sans', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        
+        .logo {
+            max-width: 300px;
+            margin-bottom: 20px;
+        }
+        
+        .company-info {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin: 20px 0;
+        }
+        
+        .title {
+            color: #4CAF50;
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .date {
+            text-align: right;
+            color: #666;
+            margin: 20px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background: white;
+        }
+        
+        th {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .amount {
+            text-align: right;
+            font-family: 'Open Sans Mono', monospace;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .total {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 20px 0;
+            padding: 10px 0;
+            border-top: 2px solid #4CAF50;
+        }
+        
+        .terms {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .terms h3 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        
+        .terms ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .terms li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .terms li:before {
+            content: "•";
+            color: #4CAF50;
+            position: absolute;
+            left: 0;
+        }
+        
+        .bank-info {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+            
+            .terms, .bank-info {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/api/placeholder/300/100" alt="BioPlant Logo" class="logo">
+            <div class="company-info">
+                <strong>BIOPLANT TARIM ÜRÜNLERİ ARAŞTIRMA LTD ŞTİ</strong><br>
+                Ofis: Kızıl İş Merkezi<br>
+                Fabrika: Sarıhamzalı mh<br>
+                Tel: +90 242 502 38 38<br>
+                E-mail: info@bioplant.com.tr<br>
+                Web: www.bioplant.com.tr
+            </div>
+        </div>
+
+        <div class="title">TEKLİF FORMU</div>
+        
+        <div class="date">Tarih: 30.01.2025</div>
+        
+        <div class="customer-info">
+            <p>Sayın yetkili,</p>
+            <p>Talebiniz üzerine hazırlanan teklifimiz aşağıda bilgilerinize sunulmuştur.</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Ürün Adı</th>
+                    <th>Ambalaj</th>
+                    <th>Miktar</th>
+                    <th>Birim Fiyat</th>
+                    <th>Toplam</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>CAL</td>
+                    <td>1 L</td>
+                    <td class="amount">1.000</td>
+                    <td class="amount">194,47 TL</td>
+                    <td class="amount">194.472,72 TL</td>
+                </tr>
+                <tr>
+                    <td>CAL</td>
+                    <td>5 L</td>
+                    <td class="amount">250</td>
+                    <td class="amount">448,20 TL</td>
+                    <td class="amount">112.050,00 TL</td>
+                </tr>
+                <tr>
+                    <td>CAL</td>
+                    <td>20 L</td>
+                    <td class="amount">72</td>
+                    <td class="amount">1.399,69 TL</td>
+                    <td class="amount">100.778,00 TL</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="total">
+            Toplam: 407.301,62 TL
+        </div>
+
+        <div class="terms">
+            <h3>Teklif Şartları:</h3>
+            <ul>
+                <li>1. Fiyatlarımıza KDV dahil değildir.</li>
+                <li>2. Ödeme peşin veya maksimum 30 gün vadelidir.</li>
+                <li>3. Teslimat süresi sipariş tarihinden itibaren 7 iş günüdür.</li>
+                <li>4. Minimum sipariş miktarı uygulanmaktadır.</li>
+                <li>5. Nakliye alıcıya aittir.</li>
+            </ul>
+            <p><strong>Teklif Geçerlilik Süresi: 7 gün</strong></p>
+        </div>
+
+        <div class="bank-info">
+            <h3>Banka Bilgileri:</h3>
+            <p>Banka: XXX Bank<br>
+            IBAN: TR00 0000 0000 0000 0000 0000 00<br>
+            Şube: Merkez</p>
+        </div>
+
+        <div class="footer">
+            <p>Teklifimizin tarafınızca olumlu değerlendirileceğini umar, işbirliğimizin devamını dileriz.</p>
+            <p>Saygılarımızla.</p>
+            <p>Vergi Dairesi: Döşemealtı<br>
+            Vergi No: 1234567890</p>
+        </div>
+    </div>
+</body>
+</html>
