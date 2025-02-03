@@ -28,6 +28,7 @@
     "sonner": "^1.7.2",
     "sqlite3": "^5.1.6",
     "tailwind-merge": "^2.6.0",
+    "winston": "^3.17.0",
     "xlsx": "^0.18.5"
   }
 }

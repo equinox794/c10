@@ -8,6 +8,7 @@ const multer = require('multer');
 const xlsx = require('xlsx'); // Excel işlemleri için xlsx modülü
 const upload = multer({ dest: 'uploads/' });
 const { createTeklifPDF } = require('./pdfGenerator');
+const logger = require('./utils/logger');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -16,6 +17,26 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    logger.error('Unhandled error:', err);
+    res.status(500).json({ 
+        error: 'Internal server error', 
+        message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
+});
+
+// Request logging middleware
+app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.url}`);
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        logger.info(`${req.method} ${req.url} ${res.statusCode} - ${duration}ms`);
+    });
+    next();
+});
 
 // UTF-8 karakter seti ayarları
 app.use((req, res, next) => {
@@ -123,13 +144,24 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
     }
 });
 
-// SQLite Promise wrapper
-const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-    db.run(sql, params, function(err) {
-        if (err) reject(err);
-        else resolve(this);
-    });
-});
+// Error handling for database operations
+const dbRun = async (sql, params = []) => {
+    try {
+        return await new Promise((resolve, reject) => {
+            db.run(sql, params, function (err) {
+                if (err) {
+                    logger.error('Database error:', { sql, params, error: err.message });
+                    reject(err);
+                } else {
+                    resolve(this);
+                }
+            });
+        });
+    } catch (err) {
+        logger.error('Database operation failed:', { sql, params, error: err.message });
+        throw err;
+    }
+};
 
 const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
     db.all(sql, params, (err, rows) => {
@@ -322,7 +354,10 @@ const initializeDatabase = async () => {
 };
 
 // Veritabanını başlat
-initializeDatabase().catch(console.error);
+initializeDatabase().catch(err => {
+    logger.error('Database initialization failed:', err);
+    process.exit(1);
+});
 
 // API Endpoint'leri
 
@@ -1852,5 +1887,5 @@ app.put('/api/teklif-settings/:id', async (req, res) => {
 
 // Sunucuyu başlat
 app.listen(port, () => {
-    console.log(`Server http://localhost:${port} adresinde çalışıyor`);
+    logger.info(`Server is running on port ${port}`);
 }); 
