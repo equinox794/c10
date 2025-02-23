@@ -4,7 +4,8 @@
   "description": "Bioplant CRM Backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
@@ -30,5 +31,8 @@
     "tailwind-merge": "^2.6.0",
     "winston": "^3.17.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   }
 }

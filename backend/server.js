@@ -11,10 +11,16 @@ const { createTeklifPDF } = require('./pdfGenerator');
 const logger = require('./utils/logger');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    optionsSuccessStatus: 200
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -42,6 +48,20 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
     res.charset = 'utf-8';
     next();
+});
+
+// Merkezi hata yönetimi
+app.use((err, req, res, next) => {
+    logger.error('Hata:', { 
+        error: err.message,
+        path: req.path,
+        method: req.method,
+        timestamp: new Date()
+    });
+    
+    if (!res.headersSent) {
+        res.status(500).json({ error: 'İşlem başarısız' });
+    }
 });
 
 // Veritabanı bağlantısı ve tablo oluşturma
@@ -82,6 +102,7 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
                 category TEXT DEFAULT 'hammadde',
                 price REAL DEFAULT 0,
                 created_at DATETIME DEFAULT (datetime('now')),
+                updated_at DATETIME DEFAULT (datetime('now')),
                 deleted_at DATETIME DEFAULT NULL
             )`);
 
@@ -230,6 +251,7 @@ const initializeDatabase = async () => {
             category TEXT DEFAULT 'hammadde',
             price REAL DEFAULT 0,
             created_at DATETIME DEFAULT (datetime('now')),
+            updated_at DATETIME DEFAULT (datetime('now')),
             deleted_at DATETIME DEFAULT NULL
         )`);
 
@@ -359,6 +381,31 @@ initializeDatabase().catch(err => {
     process.exit(1);
 });
 
+// Önbellek yönetimi
+const cache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 dakika
+
+function withCache(key, getData) {
+    return async (req, res, next) => {
+        try {
+            const cached = cache.get(key);
+            if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+                return res.json(cached.data);
+            }
+            
+            const data = await getData();
+            cache.set(key, {
+                data,
+                timestamp: Date.now()
+            });
+            
+            res.json(data);
+        } catch (error) {
+            next(error);
+        }
+    };
+}
+
 // API Endpoint'leri
 
 // Müşteriler
@@ -407,15 +454,24 @@ app.get('/api/customers/:id', (req, res) => {
 // Stok
 app.get('/api/stock', async (req, res) => {
     try {
-        const stock = await dbAll(`
-            SELECT * FROM stock 
-            WHERE deleted_at IS NULL 
-            ORDER BY created_at DESC
-        `);
-        res.json(stock);
+        const stocks = await new Promise((resolve, reject) => {
+            db.all(`
+                SELECT 
+                    id, name, code, quantity, unit, category, price, min_quantity,
+                    datetime(created_at, 'localtime') as created_at
+                FROM stock 
+                WHERE deleted_at IS NULL
+                ORDER BY created_at DESC
+            `, [], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+        
+        res.json(stocks);
     } catch (error) {
-        console.error('Stok listesi alınamadı:', error);
-        res.status(500).json({ error: 'Stok listesi alınamadı' });
+        console.error('Stok listesi getirme hatası:', error);
+        res.status(500).json({ error: 'Stok listesi alınırken bir hata oluştu' });
     }
 });
 
@@ -659,8 +715,8 @@ app.get('/api/recipes', async (req, res) => {
                    r.customer_id,
                    c.name as customer_name
             FROM recipes r
-            LEFT JOIN recipe_packages rp ON r.id = rp.recipe_id
             LEFT JOIN customers c ON r.customer_id = c.id
+            LEFT JOIN recipe_packages rp ON r.id = rp.recipe_id
             WHERE r.deleted_at IS NULL
             GROUP BY r.id
             ORDER BY r.created_at DESC
@@ -681,15 +737,62 @@ app.get('/api/recipes', async (req, res) => {
     }
 });
 
+// Reçete besin içeriği hesaplama fonksiyonu
+async function calculateRecipeNutrients(recipeId) {
+    try {
+        const ingredients = await dbAll(`
+            SELECT ri.quantity, s.*
+            FROM recipe_ingredients ri
+            JOIN stock s ON ri.stock_id = s.id
+            WHERE ri.recipe_id = ? AND s.deleted_at IS NULL
+        `, [recipeId]);
+
+        // Toplam miktar hesapla
+        const totalQuantity = ingredients.reduce((sum, ing) => sum + ing.quantity, 0);
+
+        // Her besin için toplam içeriği hesapla
+        const nutrients = {
+            n_content: 0, p_content: 0, k_content: 0, mg_content: 0,
+            ca_content: 0, s_content: 0, fe_content: 0, zn_content: 0,
+            b_content: 0, mn_content: 0, cu_content: 0, mo_content: 0,
+            na_content: 0, si_content: 0, h_content: 0, c_content: 0,
+            o_content: 0, cl_content: 0, al_content: 0, organic_content: 0,
+            alginic_acid_content: 0, mgo_content: 0, protein_content: 0,
+            nem_content: 0, kul_content: 0, ph_content: 0
+        };
+
+        // Her hammadde için besin içeriğini hesapla
+        ingredients.forEach(ing => {
+            const ratio = ing.quantity / totalQuantity;
+            Object.keys(nutrients).forEach(nutrient => {
+                if (ing[nutrient] !== null && ing[nutrient] !== undefined) {
+                    nutrients[nutrient] += (ing[nutrient] * ratio);
+                }
+            });
+        });
+
+        // Sonuçları yuvarlama
+        Object.keys(nutrients).forEach(key => {
+            nutrients[key] = parseFloat(nutrients[key].toFixed(2));
+        });
+
+        return nutrients;
+    } catch (error) {
+        console.error('Besin içeriği hesaplama hatası:', error);
+        throw error;
+    }
+}
+
 // Reçete detaylarını getir
 app.get('/api/recipes/:id', async (req, res) => {
-    const { id } = req.params;
-    
     try {
-        // Ana reçete bilgilerini al
+        const { id } = req.params;
+        
         const recipe = await dbGet(`
-            SELECT r.*, GROUP_CONCAT(DISTINCT rp.package_id) as packages
+            SELECT r.*, c.name as customer_name,
+                   GROUP_CONCAT(DISTINCT rp.package_id) as packages
             FROM recipes r
+            LEFT JOIN customers c ON r.customer_id = c.id
             LEFT JOIN recipe_packages rp ON r.id = rp.recipe_id
             WHERE r.id = ? AND r.deleted_at IS NULL
             GROUP BY r.id
@@ -699,30 +802,25 @@ app.get('/api/recipes/:id', async (req, res) => {
             return res.status(404).json({ error: 'Reçete bulunamadı' });
         }
 
-        // İçerikleri al
+        // Reçete içeriklerini al
         const ingredients = await dbAll(`
-            SELECT ri.*, s.name as stock_name
+            SELECT ri.*, s.name as stock_name, s.code as stock_code, s.unit
             FROM recipe_ingredients ri
-            LEFT JOIN stock s ON ri.stock_id = s.id
-            WHERE ri.recipe_id = ?
+            JOIN stock s ON ri.stock_id = s.id
+            WHERE ri.recipe_id = ? AND s.deleted_at IS NULL
         `, [id]);
 
-        // Ambalajları al
-        const packages = await dbAll(`
-            SELECT p.*
-            FROM recipe_packages rp
-            JOIN packages p ON rp.package_id = p.id
-            WHERE rp.recipe_id = ? AND p.deleted_at IS NULL
-        `, [id]);
+        // Besin içeriklerini hesapla
+        const nutrients = await calculateRecipeNutrients(id);
 
-        res.json({
-            ...recipe,
-            ingredients,
-            packages: packages.map(p => p.id)
-        });
+        recipe.ingredients = ingredients;
+        recipe.nutrients = nutrients;
+        recipe.packages = recipe.packages ? recipe.packages.split(',').map(id => parseInt(id)) : [];
+
+        res.json(recipe);
     } catch (error) {
-        console.error('Reçete detayları alınamadı:', error);
-        res.status(500).json({ error: 'Reçete detayları alınamadı' });
+        console.error('Reçete detayı alınamadı:', error);
+        res.status(500).json({ error: 'Reçete detayı alınamadı' });
     }
 });
 
@@ -971,7 +1069,10 @@ app.get('/api/stock/debug/all', (req, res) => {
 
 // Stok güncelleme endpoint'i
 app.put('/api/stock/:id', async (req, res) => {
-    const { name, quantity, unit, category, price, min_quantity } = req.body;
+    const { id } = req.params;
+    const { 
+        name, quantity, unit, category, price, min_quantity
+    } = req.body;
     
     if (!name) {
         res.status(400).json({ error: 'Ürün adı zorunludur' });
@@ -982,30 +1083,39 @@ app.put('/api/stock/:id', async (req, res) => {
         await new Promise((resolve, reject) => {
             db.run(`
                 UPDATE stock 
-                SET name = ?, 
-                    quantity = ?, 
-                    unit = ?, 
-                    category = ?, 
+                SET name = ?,
+                    quantity = ?,
+                    unit = ?,
+                    category = ?,
                     price = ?,
-                    min_quantity = ?
+                    min_quantity = ?,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             `, [
                 name,
-                quantity || 0,
-                unit || 'kg',
-                category || 'hammadde',
-                price || 0,
-                min_quantity || 0,
-                req.params.id
+                quantity,
+                unit,
+                category,
+                price,
+                min_quantity,
+                id
             ], function(err) {
                 if (err) reject(err);
                 else resolve(this);
             });
         });
 
-        res.json({ message: 'Stok güncellendi' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+        const updatedStock = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM stock WHERE id = ?', [id], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        res.json(updatedStock);
+    } catch (error) {
+        console.error('Stok güncelleme hatası:', error);
+        res.status(500).json({ error: 'Stok güncellenirken bir hata oluştu' });
     }
 });
 
@@ -1370,7 +1480,7 @@ app.post('/api/backup/database', (req, res) => {
 
         // Dosya boyutunu al
         const stats = fs.statSync(backupFile);
-        
+
         res.json({ 
             message: 'Veritabanı yedeği oluşturuldu', 
             path: backupFile,
@@ -1494,7 +1604,7 @@ app.post('/api/backup/restore-file', upload.single('file'), async (req, res) => 
         // Önce mevcut veritabanını yedekle
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const currentBackupPath = path.join(__dirname, 'backups', `pre_restore_${timestamp}.sqlite`);
-        
+
         // Yedekleme klasörü yoksa oluştur
         if (!fs.existsSync(path.join(__dirname, 'backups'))) {
             fs.mkdirSync(path.join(__dirname, 'backups'), { recursive: true });
@@ -1643,19 +1753,9 @@ app.get('/api/packages/:id/price-history', async (req, res) => {
 });
 
 // Settings endpoints
-app.get('/api/settings', async (req, res) => {
-    try {
-        const settings = await dbGet('SELECT * FROM settings WHERE id = 1');
-        if (!settings) {
-            res.status(404).json({ error: 'Ayarlar bulunamadı' });
-            return;
-        }
-        res.json(settings);
-    } catch (error) {
-        console.error('Ayarlar alınırken hata:', error);
-        res.status(500).json({ error: 'Ayarlar alınamadı' });
-    }
-});
+app.get('/api/settings', withCache('settings', async () => {
+    return await db.all('SELECT * FROM settings');
+}));
 
 app.put('/api/settings', async (req, res) => {
     try {
@@ -1686,30 +1786,82 @@ app.put('/api/settings', async (req, res) => {
 // Fiyat güncellemelerini kontrol et
 app.get('/api/recipes/check-price-updates', async (req, res) => {
     try {
-        // Hammadde fiyatı değişen reçeteleri bul
-        const recipes = await dbAll(`
-            SELECT DISTINCT r.id, r.name, r.is_price_updated, r.last_price_update,
-                   GROUP_CONCAT(DISTINCT rp.package_id) as packages,
-                   r.total_cost
+        const sql = `
+            SELECT DISTINCT r.* 
             FROM recipes r
             LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
             LEFT JOIN stock s ON ri.stock_id = s.id
-            LEFT JOIN recipe_packages rp ON r.id = rp.recipe_id
-            WHERE r.deleted_at IS NULL
-            AND (r.is_price_updated = false OR r.is_price_updated IS NULL)
-            GROUP BY r.id
-        `);
-
-        // Reçeteleri işle
-        recipes.forEach(recipe => {
-            recipe.packages = recipe.packages ? recipe.packages.split(',').map(id => parseInt(id)) : [];
-            recipe.total_cost = recipe.total_cost || 0;
-        });
+            LEFT JOIN packages p ON p.id IN (
+                SELECT CAST(value AS INTEGER) 
+                FROM json_each(r.packages)
+            )
+            WHERE r.deleted_at IS NULL 
+            AND (
+                r.is_price_updated = 0 
+                OR r.is_price_updated IS NULL 
+                OR s.updated_at > r.updated_at 
+                OR p.updated_at > r.updated_at
+            )
+        `;
         
+        const recipes = await dbAll(sql);
+        logger.info(`Found ${recipes.length} recipes requiring price updates`);
         res.json(recipes);
     } catch (error) {
-        console.error('Reçete fiyat kontrolü hatası:', error);
-        res.status(500).json({ error: 'Reçete fiyatları kontrol edilirken bir hata oluştu' });
+        logger.error('Error checking recipe price updates:', error);
+        res.status(500).json({ error: 'Reçete fiyat kontrolü yapılırken bir hata oluştu' });
+    }
+});
+
+// Reçete fiyatları güncelleme endpoint'i
+app.post('/api/recipes/update-prices', async (req, res) => {
+    try {
+        await dbRun('BEGIN TRANSACTION');
+
+        // Tüm reçetelerin maliyetlerini güncelle
+        const recipes = await dbAll(`
+            SELECT id FROM recipes WHERE deleted_at IS NULL
+        `);
+
+        let updatedCount = 0;
+
+        for (const recipe of recipes) {
+            // Her reçetenin maliyetini hesapla
+            const ingredients = await dbAll(`
+                SELECT 
+                    ri.quantity,
+                    s.price
+                FROM recipe_ingredients ri
+                JOIN stock s ON ri.stock_id = s.id
+                WHERE ri.recipe_id = ?
+            `, [recipe.id]);
+
+            const totalCost = ingredients.reduce((sum, ing) => {
+                return sum + (ing.quantity * ing.price);
+            }, 0);
+
+            // Reçete maliyetini güncelle
+            await dbRun(`
+                UPDATE recipes 
+                SET total_cost = ?,
+                    is_price_updated = 1,
+                    last_price_update = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [totalCost, recipe.id]);
+
+            updatedCount++;
+        }
+
+        await dbRun('COMMIT');
+
+        res.json({ 
+            message: 'Reçete fiyatları güncellendi',
+            updatedCount
+        });
+    } catch (error) {
+        await dbRun('ROLLBACK');
+        console.error('Fiyat güncelleme hatası:', error);
+        res.status(500).json({ error: 'Fiyatlar güncellenirken bir hata oluştu' });
     }
 });
 
@@ -1889,3 +2041,101 @@ app.put('/api/teklif-settings/:id', async (req, res) => {
 app.listen(port, () => {
     logger.info(`Server is running on port ${port}`);
 }); 
+
+// Yeni stok ekleme endpoint'i
+app.post('/api/stock', async (req, res) => {
+    const { 
+        name, quantity, unit, category, price, min_quantity
+    } = req.body;
+
+    if (!name) {
+        return res.status(400).json({ error: 'Ürün adı zorunludur' });
+    }
+
+    try {
+        const result = await new Promise((resolve, reject) => {
+            db.run(`
+                INSERT INTO stock (
+                    name, quantity, unit, category, price, min_quantity
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                name,
+                quantity || 0,
+                unit || 'kg',
+                category || 'hammadde',
+                price || 0,
+                min_quantity || 0
+            ], function(err) {
+                if (err) reject(err);
+                else resolve(this);
+            });
+        });
+
+        // Yeni eklenen stok verisini getir
+        const newStock = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM stock WHERE id = ?', [result.lastID], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        res.status(201).json(newStock);
+    } catch (error) {
+        console.error('Stok ekleme hatası:', error);
+        res.status(500).json({ error: 'Stok eklenirken bir hata oluştu' });
+    }
+});
+
+// Reçete silme endpoint'i
+app.delete('/api/recipes/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log('Deleting recipe:', id); // Debug log
+    
+    try {
+        await dbRun('BEGIN TRANSACTION');
+
+        // Önce reçetenin var olduğunu kontrol et
+        const recipe = await dbGet('SELECT * FROM recipes WHERE id = ?', [id]);
+        console.log('Found recipe:', recipe); // Debug log
+
+        if (!recipe) {
+            await dbRun('ROLLBACK');
+            return res.status(404).json({ error: 'Reçete bulunamadı' });
+        }
+
+        // Reçeteyi soft delete yap
+        await dbRun('UPDATE recipes SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [id]);
+
+        // İlişkili kayıtları temizle
+        await dbRun('DELETE FROM recipe_packages WHERE recipe_id = ?', [id]);
+        await dbRun('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [id]);
+
+        await dbRun('COMMIT');
+        res.json({ success: true });
+    } catch (error) {
+        await dbRun('ROLLBACK');
+        console.error('Reçete silinemedi:', error);
+        res.status(500).json({ error: 'Reçete silinemedi' });
+    }
+});
+
+// Reçete fiyat güncelleme kontrolü endpoint'i
+app.get('/api/recipes/check-price-updates', async (req, res) => {
+    try {
+        const sql = `
+            SELECT DISTINCT r.* 
+            FROM recipes r
+            LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
+            LEFT JOIN stock s ON ri.stock_id = s.id
+            WHERE r.deleted_at IS NULL 
+            AND (r.is_price_updated = 0 OR r.is_price_updated IS NULL)
+        `;
+        
+        const recipes = await dbAll(sql);
+        logger.info(`Fiyat güncellemesi gereken ${recipes.length} reçete bulundu`);
+        res.json(recipes);
+    } catch (error) {
+        logger.error('Reçete fiyat kontrolü hatası:', error);
+        res.status(500).json({ error: 'Reçete fiyat kontrolü yapılırken bir hata oluştu' });
+    }
+});

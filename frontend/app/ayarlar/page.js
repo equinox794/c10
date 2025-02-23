@@ -30,10 +30,10 @@ export default function SettingsPage() {
     
     // Fiyatlandırma ayarları için state'ler
     const [settings, setSettings] = useState({
-        dolar_kuru: 0,
-        liste_a_kar_orani: 20,
-        liste_b_kar_orani: 35,
-        liste_c_kar_orani: 50
+        dolar_kuru: '0',
+        liste_a_kar_orani: '20',
+        liste_b_kar_orani: '35',
+        liste_c_kar_orani: '50'
     });
 
     // Teklif ayarları için state'ler
@@ -74,7 +74,13 @@ export default function SettingsPage() {
             const response = await fetch('http://localhost:3001/api/settings');
             if (!response.ok) throw new Error('Ayarlar yüklenemedi');
             const data = await response.json();
-            setSettings(data);
+            // Sayısal değerleri string'e çevir
+            setSettings({
+                dolar_kuru: data.dolar_kuru?.toString() || '0',
+                liste_a_kar_orani: data.liste_a_kar_orani?.toString() || '20',
+                liste_b_kar_orani: data.liste_b_kar_orani?.toString() || '35',
+                liste_c_kar_orani: data.liste_c_kar_orani?.toString() || '50'
+            });
         } catch (error) {
             console.error('Ayarlar yüklenirken hata:', error);
             toast.error('Ayarlar yüklenemedi');

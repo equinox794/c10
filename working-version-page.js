@@ -72,48 +72,48 @@ export default function RecipePage() {
     const loadCustomers = async () => {
         try {
             const response = await fetch('http://localhost:3001/api/customers');
-            if (!response.ok) throw new Error('Müşteriler yüklenemedi');
+            if (!response.ok) throw new Error('Müşteri listesi alınamadı');
             const data = await response.json();
             setCustomers(data);
         } catch (error) {
-            console.error('Müşterileri yükleme hatası:', error);
-            toast.error('Müşteriler yüklenirken bir hata oluştu');
+            console.error('Müşteri listesi alınamadı:', error);
+            toast.error('Müşteri listesi yüklenirken hata oluştu');
         }
     };
 
     const loadPackages = async () => {
         try {
             const response = await fetch('http://localhost:3001/api/packages');
-            if (!response.ok) throw new Error('Ambalajlar yüklenemedi');
+            if (!response.ok) throw new Error('Ambalaj listesi alınamadı');
             const data = await response.json();
             setPackages(data);
         } catch (error) {
-            console.error('Ambalajları yükleme hatası:', error);
-            toast.error('Ambalajlar yüklenirken bir hata oluştu');
+            console.error('Ambalaj listesi alınamadı:', error);
+            toast.error('Ambalaj listesi yüklenirken hata oluştu');
         }
     };
 
     const loadStock = async () => {
         try {
             const response = await fetch('http://localhost:3001/api/stock');
-            if (!response.ok) throw new Error('Stok yüklenemedi');
+            if (!response.ok) throw new Error('Stok listesi alınamadı');
             const data = await response.json();
             setStock(data);
         } catch (error) {
-            console.error('Stok yükleme hatası:', error);
-            toast.error('Stok yüklenirken bir hata oluştu');
+            console.error('Stok listesi alınamadı:', error);
+            toast.error('Stok listesi yüklenirken hata oluştu');
         }
     };
 
     const loadRecipes = async () => {
         try {
             const response = await fetch('http://localhost:3001/api/recipes');
-            if (!response.ok) throw new Error('Reçeteler yüklenemedi');
+            if (!response.ok) throw new Error('Reçete listesi alınamadı');
             const data = await response.json();
             setRecipes(data);
         } catch (error) {
-            console.error('Reçeteleri yükleme hatası:', error);
-            toast.error('Reçeteler yüklenirken bir hata oluştu');
+            console.error('Reçete listesi alınamadı:', error);
+            toast.error('Reçete listesi yüklenirken hata oluştu');
         }
     };
 
@@ -258,13 +258,17 @@ export default function RecipePage() {
             if (!response.ok) throw new Error('Reçete detayları alınamadı');
             const recipeDetails = await response.json();
 
+            const packageIds = Array.isArray(recipeDetails.packages) 
+                ? recipeDetails.packages.map(p => p.toString())
+                : [];
+
             setIsEditing(true);
             setEditingRecipeId(recipe.id);
             setNewRecipe({
                 name: recipeDetails.name,
-                customer_id: recipeDetails.customer_id?.toString(),
+                customer_id: recipeDetails.customer_id.toString(),
                 density: recipeDetails.density,
-                package_ids: recipeDetails.packages?.map(p => p.toString()) || [],
+                package_ids: packageIds,
                 ingredients: recipeDetails.ingredients || []
             });
         } catch (error) {
@@ -277,53 +281,46 @@ export default function RecipePage() {
         if (!confirm('Bu reçeteyi silmek istediğinize emin misiniz?')) return;
 
         try {
-            const response = await fetch(`http://localhost:3001/api/recipes/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json'
-                }
+            const response = await fetch(`http://localhost:3001/api/recipes/delete/${id}`, {
+                method: 'DELETE'
             });
 
-            const text = await response.text();
-            console.log('Response text:', text); // Debug log
+            if (response.status === 404) {
+                throw new Error('Reçete bulunamadı');
+            }
 
             if (!response.ok) {
-                let errorMessage = 'Reçete silinemedi';
-                try {
-                    const errorData = JSON.parse(text);
-                    errorMessage = errorData.error || errorMessage;
-                } catch (e) {
-                    console.error('Error parsing error response:', e);
-                }
-                throw new Error(errorMessage);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Reçete silinemedi');
             }
 
             toast.success('Reçete başarıyla silindi');
-            loadRecipes(); // Listeyi yenile
+            await loadRecipes(); // Listeyi yenile
         } catch (error) {
-            console.error('Reçete silme hatası:', error);
+            console.error('Reçete silinirken hata:', error);
             toast.error(error.message || 'Reçete silinirken bir hata oluştu');
         }
     };
 
-    const handleCopyRecipe = async (recipe) => {
+    const handleCopyRecipe = async (id) => {
         try {
-            const response = await fetch(`http://localhost:3001/api/recipes/${recipe.id}`);
-            if (!response.ok) throw new Error('Reçete detayları alınamadı');
-            const recipeDetails = await response.json();
-
-            setNewRecipe({
-                name: `${recipeDetails.name} (Kopya)`,
-                customer_id: recipeDetails.customer_id?.toString(),
-                density: recipeDetails.density,
-                package_ids: recipeDetails.packages?.map(p => p.toString()) || [],
-                ingredients: recipeDetails.ingredients || []
+            const response = await fetch(`http://localhost:3001/api/recipes/${id}/copy`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
 
-            toast.success('Reçete kopyalandı, bilgileri düzenleyebilirsiniz');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Reçete kopyalanamadı');
+            }
+
+            toast.success('Reçete başarıyla kopyalandı');
+            loadRecipes();
         } catch (error) {
-            console.error('Reçete kopyalama hatası:', error);
-            toast.error('Reçete kopyalanırken bir hata oluştu');
+            console.error('Reçete kopyalanırken hata:', error);
+            toast.error(error.message || 'Reçete kopyalanırken bir hata oluştu');
         }
     };
 
@@ -721,25 +718,25 @@ export default function RecipePage() {
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => handleEditRecipe(recipe)}
-                                                        className="hover:bg-blue-900/20 text-blue-400"
+                                                        className="text-slate-400 hover:text-blue-400"
                                                     >
-                                                        <Edit className="h-4 w-4" />
+                                                        <Edit size={18} />
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => handleCopyRecipe(recipe)}
-                                                        className="hover:bg-blue-900/20 text-blue-400"
+                                                        onClick={() => handleCopyRecipe(recipe.id)}
+                                                        className="text-slate-400 hover:text-blue-400"
                                                     >
-                                                        <Copy className="h-4 w-4" />
+                                                        <Copy size={18} />
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => handleDeleteRecipe(recipe.id)}
-                                                        className="hover:bg-red-900/20 text-red-400"
+                                                        className="text-slate-400 hover:text-red-400"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <Trash2 size={18} />
                                                     </Button>
                                                 </div>
                                             </td>
