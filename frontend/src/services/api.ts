@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001/api';
+const API_URL = `${process.env.NEXT_PUBLIC_API_ORIGIN}/api`;
 
 export interface Customer {
   id: number;
@@ -53,4 +53,4 @@ export const api = {
     const response = await fetch(`${API_URL}/recipes`);
     return response.json();
   },
-}; 
+};
