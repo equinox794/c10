@@ -10,19 +10,31 @@ const upload = multer({ dest: 'uploads/' });
 const { createTeklifPDF } = require('./pdfGenerator');
 const logger = require('./utils/logger');
 
+// Auth bileşenlerini içe aktar
+const { authenticateToken } = require('./utils/auth/authMiddleware');
+const authService = require('./utils/auth/authService');
+
 const app = express();
 const port = 3001;
 
-// Middleware
+// CORS middleware'i ekle - tüm origin'lere izin ver veya sadece frontend'in adresini belirt
 app.use(cors({
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-    optionsSuccessStatus: 200
+  origin: '*', // Güvenlik için production'da frontend URL'nizi belirtin, örn: 'https://bioplant.web.tr'
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// OPTIONS istekleri için özel handler
+app.options('*', cors()); // Preflight istekleri için
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// UTF-8 karakter seti ayarları
+app.use((req, res, next) => {
+    res.charset = 'utf-8';
+    next();
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -41,12 +53,6 @@ app.use((req, res, next) => {
         const duration = Date.now() - start;
         logger.info(`${req.method} ${req.url} ${res.statusCode} - ${duration}ms`);
     });
-    next();
-});
-
-// UTF-8 karakter seti ayarları
-app.use((req, res, next) => {
-    res.charset = 'utf-8';
     next();
 });
 
@@ -2138,4 +2144,50 @@ app.get('/api/recipes/check-price-updates', async (req, res) => {
         logger.error('Reçete fiyat kontrolü hatası:', error);
         res.status(500).json({ error: 'Reçete fiyat kontrolü yapılırken bir hata oluştu' });
     }
+});
+
+// Auth endpoint'leri
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Kullanıcı adı ve şifre gereklidir' 
+            });
+        }
+        
+        const result = await authService.login(username, password);
+        
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                message: 'Giriş başarılı',
+                token: result.token,
+                user: result.user
+            });
+        } else {
+            return res.status(401).json({
+                success: false,
+                message: result.message || 'Geçersiz kullanıcı adı veya şifre'
+            });
+        }
+    } catch (error) {
+        logger.error('Login error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Giriş sırasında bir hata oluştu'
+        });
+    }
+});
+
+// Test endpoint
+app.get('/api/auth/check', authenticateToken, (req, res) => {
+    res.json({ success: true, message: 'Token geçerli', user: req.user });
+});
+
+// Teklif oluşturma API'si
+app.post('/api/teklif', authenticateToken, async (req, res) => {
+    // ... existing code ...
 });

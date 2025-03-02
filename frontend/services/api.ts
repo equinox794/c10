@@ -45,7 +45,24 @@ async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`, options);
+  const defaultOptions: RequestInit = {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }
+  };
+  
+  const mergedOptions = {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...(options?.headers || {})
+    }
+  };
+  
+  const response = await fetch(`${API_URL}${endpoint}`, mergedOptions);
   if (!response.ok) {
     throw new Error(`API isteği başarısız: ${response.statusText}`);
   }
