@@ -1,0 +1,25 @@
+Sales Navigator – Boolean Keywords (paste into Keywords)
+
+EN-only keywords (Lead search):
+("Export Manager" OR "International Sales" OR "Overseas Sales" OR "Sales Director" OR "Sales Manager" OR "Business Development") AND (KOH OR "potassium hydroxide" OR KCl OR "potassium chloride" OR "muriate of potash" OR CaCl2 OR "calcium chloride") AND (manufacturer OR factory OR plant OR producer)
+
+Company keywords:
+(KOH OR "potassium hydroxide" OR KCl OR "potassium chloride" OR "muriate of potash" OR CaCl2 OR "calcium chloride") AND (manufacturer OR factory OR plant OR producer)
+
+Add CN/RU terms to expand:
+Chinese: (氢氧化钾 OR 氯化钾 OR 氯化钙) AND (出口 OR 销售)
+Russian: (гидроксид калия OR хлорид калия OR хлорид кальция) AND (экспорт OR продажи)
+
+Suggested Filters
+- Geography: China, Russia
+- Industry: Chemicals, Mining & Metals, Industrial Manufacturing
+- Function: Sales, Business Development
+- Seniority: Manager, Director, Head, VP, CXO, Owner
+- Company headcount: 51–10,000
+- Company type: Privately Held, Public
+- Relationship: 2nd + 3rd degree
+
+Usage
+1) Start with EN keywords, then try CN/RU variants.
+2) Save searches and enable alerts (daily/weekly).
+3) Prioritize profiles with Export/Overseas Sales titles and manufacturer-type companies.

@@ -1,0 +1,11 @@
+Personalization summary:
+Variables used:
+- COMPANY_NAME: 
+- WEBSITE: 
+- CONTACT_NAME: 
+- EMAIL: 
+- PHONE_WHATSAPP: 
+- PORTS: Mersin/İzmir
+- PAYMENT_TERMS: LC at sight
+- TRIAL_QTY_MT: 20
+- MONTHLY_QTY_MT: 200
