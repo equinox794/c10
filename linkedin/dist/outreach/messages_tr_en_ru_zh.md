@@ -1,23 +1,23 @@
-Variables (replace globally): , , , , , Mersin/İzmir, LC at sight, 20, 200
+Variables (replace globally): Bioplant Tarım Ltd., https://www.bioplant.com.tr, Serkan Beklen, , , Mersin/İzmir, T/T 30% deposit, 70% against documents, 20, 200
 
 Products focus: KOH (potassium hydroxide), KCl (potassium chloride), CaCl2 (calcium chloride)
 
 1) Connection note (≤300 chars)
 - TR:
-Merhaba [İsim], Türkiye’de KOH/KCl/CaCl2 ithalatı yapıyoruz.  – . İhracat/satış sorumlusu ile kısa bilgi alışverişi yapmak isterim. Uygunsa bağlanalım.
+Merhaba [İsim], Türkiye’de KOH/KCl/CaCl2 ithalatı yapıyoruz. Bioplant Tarım Ltd. – https://www.bioplant.com.tr. İhracat/satış sorumlusu ile kısa bilgi alışverişi yapmak isterim. Uygunsa bağlanalım.
 
 - EN:
-Hi [Name], we import KOH/KCl/CaCl2 into Turkey.  – . Would like to connect with export/sales contact for a brief exchange.
+Hi [Name], we import KOH/KCl/CaCl2 into Turkey. Bioplant Tarım Ltd. – https://www.bioplant.com.tr. Would like to connect with export/sales contact for a brief exchange.
 
 - RU:
-Здравствуйте, [Имя]. Мы импортируем KOH/KCl/CaCl2 в Турцию.  – . Хотел бы связаться с ответственным за экспорт/продажи.
+Здравствуйте, [Имя]. Мы импортируем KOH/KCl/CaCl2 в Турцию. Bioplant Tarım Ltd. – https://www.bioplant.com.tr. Хотел бы связаться с ответственным за экспорт/продажи.
 
 - ZH:
-您好，[姓名]。我们向土耳其进口KOH/KCl/CaCl2。 – 。希望与出口/销售负责人简单沟通。
+您好，[姓名]。我们向土耳其进口KOH/KCl/CaCl2。Bioplant Tarım Ltd. – https://www.bioplant.com.tr。希望与出口/销售负责人简单沟通。
 
 2) First message (InMail/DM)
 - TR:
-Merhaba [İsim], ben ,  – Türkiye. KOH/KCl/CaCl2 için düzenli alım yapıyoruz. Aşağıdaki bilgileri paylaşabilir misiniz?
+Merhaba [İsim], ben Serkan Beklen, Bioplant Tarım Ltd. – Türkiye. KOH/KCl/CaCl2 için düzenli alım yapıyoruz. Aşağıdaki bilgileri paylaşabilir misiniz?
 • Fiyat: FOB [港口/порт] veya CIF/CFR Mersin/İzmir
 • MOQ ve aylık kapasite
 • Teslim süresi
@@ -26,7 +26,7 @@ Merhaba [İsim], ben ,  – Türkiye. KOH/KCl/CaCl2 için düzenli alım yapıyo
 İletişim: , WhatsApp: . Teşekkürler.
 
 - EN:
-Hi [Name], I’m  from , Turkey. We regularly source KOH/KCl/CaCl2. Please share:
+Hi [Name], I’m Serkan Beklen from Bioplant Tarım Ltd., Turkey. We regularly source KOH/KCl/CaCl2. Please share:
 • Price: FOB [port] or CIF/CFR Mersin/İzmir
 • MOQ and monthly capacity
 • Lead time
@@ -35,7 +35,7 @@ Hi [Name], I’m  from , Turkey. We regularly source KOH/KCl/CaCl2. Please share
 Contact: , WhatsApp: . Thanks.
 
 - RU:
-Здравствуйте, [Имя]. Я , , Турция. Закупаем KOH/KCl/CaCl2 на регулярной основе. Просьба сообщить:
+Здравствуйте, [Имя]. Я Serkan Beklen, Bioplant Tarım Ltd., Турция. Закупаем KOH/KCl/CaCl2 на регулярной основе. Просьба сообщить:
 • Цена: FOB [порт] или CIF/CFR Mersin/İzmir
 • MOQ и месячный объём
 • Срок поставки
@@ -44,7 +44,7 @@ Contact: , WhatsApp: . Thanks.
 Контакт: , WhatsApp: . Спасибо.
 
 - ZH:
-您好，[姓名]。我是（，土耳其）。我们常规采购 KOH/KCl/CaCl2。请提供：
+您好，[姓名]。我是Serkan Beklen（Bioplant Tarım Ltd.，土耳其）。我们常规采购 KOH/KCl/CaCl2。请提供：
 • 价格：FOB [港口] 或 CIF/CFR Mersin/İzmir
 • MOQ 与月供能力
 • 交期
@@ -58,7 +58,7 @@ Product: [KOH 90/95% flakes] / [KCl industrial/fertilizer grade] / [CaCl2 74%/94
 Qty: Trial 20 MT; Regular 200 MT/month
 Packaging: 25kg bags or 1MT big bags
 Terms: FOB [port] or CFR/CIF Mersin/İzmir
-Payment: LC at sight
+Payment: T/T 30% deposit, 70% against documents
 Docs: COA/MSDS, ISO/REACH (if any)
 
 - TR:
@@ -66,7 +66,7 @@ Docs: COA/MSDS, ISO/REACH (if any)
 Miktar: Deneme 20 MT; Düzenli 200 MT/ay
 Ambalaj: 25 kg veya 1 MT big bag
 Teslim: FOB [liman] veya CFR/CIF Mersin/İzmir
-Ödeme: LC at sight
+Ödeme: T/T 30% deposit, 70% against documents
 Doküman: COA/MSDS, ISO/REACH (varsa)
 
 - RU:
@@ -74,7 +74,7 @@ Doküman: COA/MSDS, ISO/REACH (varsa)
 Объём: Тест 20 МТ; Регулярно 200 МТ/мес
 Упаковка: мешки 25 кг или биг-бэг 1 МТ
 Условия: FOB [порт] или CFR/CIF Mersin/İzmir
-Оплата: LC at sight
+Оплата: T/T 30% deposit, 70% against documents
 Документы: COA/MSDS, ISO/REACH (если есть)
 
 - ZH:
@@ -82,7 +82,7 @@ Doküman: COA/MSDS, ISO/REACH (varsa)
 数量： 试单 20 吨；常规 200 吨/月
 包装：25kg 袋或 1MT 集装袋
 条款：FOB [港口] 或 CFR/CIF Mersin/İzmir
-付款： LC at sight
+付款： T/T 30% deposit, 70% against documents
 文件：COA/MSDS、ISO/REACH（如有）
 
 4) Follow-ups
