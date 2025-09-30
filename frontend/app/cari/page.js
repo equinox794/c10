@@ -185,7 +185,7 @@ export default function CariPage() {
           </button>
           <label className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors cursor-pointer">
             <Upload size={20} />
-            <span>Excel'den Yükle</span>
+            <span>Excel&apos;den Yükle</span>
             <input
               ref={fileInputRef}
               type="file"

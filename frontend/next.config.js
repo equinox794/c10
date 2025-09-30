@@ -6,10 +6,15 @@ const nextConfig = {
     // Server Actions artık varsayılan olarak aktif
   },
   async rewrites() {
+    const defaultOrigin = 'http://localhost:3001';
+    const envOrigin = process.env.NEXT_PUBLIC_API_ORIGIN || '';
+    const isValidOrigin = /^https?:\/\//.test(envOrigin);
+    const apiOrigin = isValidOrigin ? envOrigin : defaultOrigin;
+
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_ORIGIN}/api/:path*`,
+        destination: `${apiOrigin}/api/:path*`,
         basePath: false,
       },
     ];
