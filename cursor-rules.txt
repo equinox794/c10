@@ -1,0 +1,492 @@
+# Bioplant CRM - Cursor IDE Kuralları
+
+## PROJE HAKKINDA
+Bu, Bioplant için geliştirilmiş bir CRM (Customer Relationship Management) sistemidir.
+Türkçe arayüze sahip, müşteri, stok, reçete, sipariş ve teklif yönetimi yapan full-stack web uygulamasıdır.
+
+## TEKNOLOJİ STACK
+
+### Frontend
+- **Framework:** Next.js 14 (App Router)
+- **UI Library:** React 18
+- **Styling:** Tailwind CSS
+- **Component Library:** Radix UI (dialog, select, label, progress, form)
+- **Icons:** Lucide React
+- **Utilities:**
+  - class-variance-authority (CVA)
+  - clsx, tailwind-merge
+  - date-fns
+  - react-hook-form
+  - sonner (toast notifications)
+
+### Backend (Mevcut)
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **Database:** SQLite3 (Migration: PostgreSQL/Supabase)
+- **PDF:** PDFKit
+- **Excel:** xlsx
+- **File Upload:** multer
+- **Auth:** bcrypt, jsonwebtoken (planlanmış)
+- **Logging:** winston
+
+### Deployment (Hedef)
+- **Frontend & API:** Vercel (Serverless Functions)
+- **Database:** Supabase (PostgreSQL)
+- **Storage:** Vercel Blob / Supabase Storage
+
+## KOD YAZIM KURALLARI
+
+### Genel
+1. **Dil:** Türkçe değişken/fonksiyon isimleri KULLANMA, sadece UI metinleri Türkçe
+2. **Naming Convention:**
+   - Değişkenler: camelCase (customerName, orderTotal)
+   - Fonksiyonlar: camelCase (fetchCustomers, calculatePrice)
+   - Componentler: PascalCase (CustomerList, OrderForm)
+   - Constants: UPPER_SNAKE_CASE (API_URL, MAX_ITEMS)
+   - Dosyalar: kebab-case (customer-list.js, order-form.tsx)
+3. **Async/Await:** Promise yerine async/await kullan
+4. **Error Handling:** Her API çağrısında try-catch kullan
+5. **TypeScript:** Mümkün olduğunca tip tanımla (şu an JavaScript ama migration düşünülüyor)
+
+### React & Next.js
+1. **Server vs Client Components:**
+   - Default olarak Server Component kullan
+   - "use client" sadece gerektiğinde (onClick, useState, useEffect varsa)
+2. **Data Fetching:**
+   - Server Component'te direkt fetch kullan
+   - Client Component'te useEffect + fetch veya SWR
+3. **API Routes:**
+   - Yeni endpoint'ler: app/api/[resource]/route.js formatında
+   - Export: GET, POST, PUT, DELETE fonksiyonları
+   - Return: NextResponse.json()
+4. **Styling:**
+   - Tailwind utility classes kullan
+   - Custom CSS yazmak yerine Tailwind
+   - Dark mode desteği eklenebilir (şu an yok)
+5. **Form Handling:**
+   - react-hook-form kullan
+   - Validasyon: client + server-side
+   - Error mesajları Türkçe
+
+### API & Database
+1. **Supabase Client:**
+   - Tüm DB işlemleri için lib/supabase.js kullan
+   - RLS (Row Level Security) kurallarına uy
+   - Server-side işlemlerde supabaseAdmin kullan
+2. **Query Patterns:**
+   ```javascript
+   // SELECT
+   const { data, error } = await supabase.from('customers').select('*')
+
+   // INSERT
+   const { data, error } = await supabase.from('customers').insert([{ name, type }])
+
+   // UPDATE
+   const { data, error } = await supabase.from('customers').update({ name }).eq('id', id)
+
+   // DELETE (Soft delete - deleted_at kullan)
+   const { data, error } = await supabase.from('customers').update({ deleted_at: new Date() }).eq('id', id)
+   ```
+3. **SQL Migration:**
+   - Tüm schema değişiklikleri supabase/migrations/ klasöründe
+   - Naming: 00X_descriptive_name.sql
+   - Rollback planı dahil et
+4. **Error Responses:**
+   ```javascript
+   if (error) {
+     return NextResponse.json({ error: error.message }, { status: 500 })
+   }
+   ```
+
+### Güvenlik
+1. **Environment Variables:**
+   - Hassas bilgiler .env.local'de
+   - Public variables: NEXT_PUBLIC_ prefix
+   - Production: Vercel dashboard'dan ayarla
+2. **Input Validation:**
+   - Tüm user input'ları validate et
+   - SQL injection riski (Supabase otomatik koruyor ama dikkatli ol)
+   - XSS koruması
+3. **Authentication (Gelecekte):**
+   - Supabase Auth kullan
+   - JWT token based
+   - RLS policies ile data güvenliği
+
+### Performans
+1. **Images:**
+   - next/image kullan (otomatik optimization)
+   - lazy loading default aktif
+2. **Caching:**
+   - Server Component'lerde fetch cache kullan
+   - Revalidate stratejileri belirle
+3. **Bundle Size:**
+   - Büyük kütüphaneleri dynamic import ile lazy load et
+   - Tree-shaking için named imports kullan
+4. **Database:**
+   - Index'leri doğru kullan (migrations'da tanımla)
+   - N+1 query probleminden kaçın
+   - Pagination kullan (büyük listeler için)
+
+## PROJE YAPISINA UYGUNLUK
+
+### Dosya Organizasyonu
+```
+frontend/
+├── app/
+│   ├── api/              # API routes (backend logic)
+│   ├── cari/             # Müşteri yönetimi sayfası
+│   ├── stok/             # Stok yönetimi sayfası
+│   ├── recete/           # Reçete yönetimi sayfası
+│   ├── siparis/          # Sipariş yönetimi sayfası
+│   ├── ayarlar/          # Ayarlar sayfası
+│   ├── layout.js         # Root layout
+│   └── page.js           # Ana sayfa
+├── components/           # Reusable components
+│   ├── ui/               # Base UI components (Radix wrappers)
+│   └── ...               # Feature components
+├── lib/                  # Utilities & helpers
+│   ├── supabase.js       # Supabase client
+│   └── utils.js          # Helper functions
+├── services/             # API service functions
+└── constants/            # Constant values
+```
+
+### Component Yapısı
+```javascript
+// ✅ İYİ - Server Component (default)
+async function CustomerList() {
+  const customers = await fetch('/api/customers').then(r => r.json())
+  return <div>{customers.map(...)}</div>
+}
+
+// ✅ İYİ - Client Component (sadece gerektiğinde)
+'use client'
+function CustomerForm() {
+  const [name, setName] = useState('')
+  // ...
+}
+
+// ❌ KÖTÜ - Gereksiz client component
+'use client'
+function StaticHeader() {
+  return <h1>Başlık</h1>  // use client gereksiz
+}
+```
+
+### API Route Yapısı
+```javascript
+// app/api/customers/route.js
+import { NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type')
+
+    let query = supabase.from('customers').select('*')
+    if (type) query = query.eq('type', type)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    return NextResponse.json(data)
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+export async function POST(request) {
+  try {
+    const body = await request.json()
+    const { data, error } = await supabase
+      .from('customers')
+      .insert([body])
+      .select()
+
+    if (error) throw error
+    return NextResponse.json(data[0], { status: 201 })
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+```
+
+## İŞ MANTIKLARI
+
+### Müşteri (Customer) Modülü
+- CRUD operations: Create, Read, Update, Soft Delete
+- Types: Müşteri, Tedarikçi, Fason, Diğer, Bioplant
+- Bulk import: Excel dosyası ile toplu müşteri ekleme
+- Search: İsme göre arama, type'a göre filtreleme
+- Balance tracking: Cari hesap bakiyesi
+
+### Stok (Stock) Modülü
+- Hammadde ve ambalaj yönetimi
+- Categories: hammadde, ambalaj
+- Units: kg, L, adet vb.
+- Min quantity alerts: Minimum stok uyarısı
+- Price history: Fiyat geçmişi takibi
+- Otomatik fiyat güncelleme: Stok fiyatı değişince reçeteleri güncelle
+
+### Reçete (Recipe) Modülü
+- Müşteri bazlı reçeteler
+- Recipe items: Hammadde ve ambalaj içerikleri
+- Total cost calculation: Otomatik maliyet hesaplama
+- Price update tracking: Fiyat güncellemelerini takip et
+- Density field: Yoğunluk bilgisi
+
+### Sipariş (Order) Modülü
+- Müşteriye sipariş oluşturma
+- Reçete seçimi
+- Quantity ve total price
+- Status tracking: Beklemede, Hazırlanıyor, Tamamlandı, İptal
+- Order items: Sipariş kalemleri
+
+### Teklif (Offer/Quotation) Modülü
+- PDF generation: pdfkit ile teklif PDF'i oluşturma
+- Company info: Bioplant şirket bilgileri
+- Price lists: A, B, C listeleri (farklı kar oranları)
+- Custom pricing: Liste fiyatları dışında özel fiyatlar
+
+### Ayarlar (Settings) Modülü
+- Dolar kuru
+- Kar oranları (Liste A, B, C)
+- Teklif ayarları (şirket bilgileri, logo vb.)
+- Backup & Restore: Database backup alma ve geri yükleme
+
+## ÖZEL DURUMLAR
+
+### PDF Generation (Serverless)
+```javascript
+// Vercel serverless'ta pdfkit kullanımı
+import PDFDocument from 'pdfkit'
+
+export async function POST(request) {
+  const doc = new PDFDocument()
+  const chunks = []
+
+  doc.on('data', (chunk) => chunks.push(chunk))
+  doc.on('end', () => {
+    const pdfBuffer = Buffer.concat(chunks)
+    return new NextResponse(pdfBuffer, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename=teklif.pdf'
+      }
+    })
+  })
+
+  // PDF içeriği oluştur
+  doc.text('Teklif', 100, 100)
+  doc.end()
+}
+```
+
+### Excel Import/Export
+```javascript
+import * as XLSX from 'xlsx'
+
+// Import
+const workbook = XLSX.read(buffer, { type: 'buffer' })
+const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+const data = XLSX.utils.sheet_to_json(worksheet)
+
+// Export
+const ws = XLSX.utils.json_to_sheet(data)
+const wb = XLSX.utils.book_new()
+XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
+const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+```
+
+### Soft Delete Pattern
+```javascript
+// ❌ Hard delete yapma
+await supabase.from('customers').delete().eq('id', id)
+
+// ✅ Soft delete yap
+await supabase.from('customers')
+  .update({ deleted_at: new Date().toISOString() })
+  .eq('id', id)
+
+// ✅ Query'lerde deleted_at kontrolü
+const { data } = await supabase
+  .from('customers')
+  .select('*')
+  .is('deleted_at', null)  // Silinmemiş kayıtlar
+```
+
+## HATA YÖNETİMİ
+
+### Frontend
+```javascript
+// Toast notifications ile kullanıcıya bildir
+import { toast } from 'sonner'
+
+try {
+  const response = await fetch('/api/customers', { method: 'POST', body: JSON.stringify(data) })
+  if (!response.ok) throw new Error('İşlem başarısız')
+  toast.success('Müşteri eklendi')
+} catch (error) {
+  toast.error('Hata: ' + error.message)
+  console.error('Error:', error)
+}
+```
+
+### Backend
+```javascript
+// Detaylı error logging
+import { NextResponse } from 'next/server'
+
+try {
+  // İşlem
+} catch (error) {
+  console.error('[API Error]', {
+    message: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString()
+  })
+
+  return NextResponse.json(
+    { error: 'Bir hata oluştu', details: error.message },
+    { status: 500 }
+  )
+}
+```
+
+## TEST & DEBUGGING
+
+### Development
+```bash
+# Backend test
+cd backend && node server.js
+
+# Frontend test
+cd frontend && npm run dev
+
+# Her ikisi birden
+./start-dev.sh
+```
+
+### Production Build Test
+```bash
+cd frontend
+npm run build
+npm start
+```
+
+### Common Issues
+1. **Port conflict:** Backend (3001) veya Frontend (3000) portları kullanımda
+   - Solution: `lsof -ti:3001 | xargs kill` veya port değiştir
+2. **CORS errors:** API çağrıları başarısız
+   - Solution: Next.js API routes kullanıyorsan gerekli değil
+3. **Environment variables not found:**
+   - Solution: .env.local dosyası var mı? NEXT_PUBLIC_ prefix doğru mu?
+
+## DEPLOYMENT WORKFLOW
+
+### 1. Supabase Setup
+```sql
+-- Migration çalıştır
+psql -h db.xxx.supabase.co -U postgres -d postgres -f supabase/migrations/001_initial_schema.sql
+```
+
+### 2. Vercel Deployment
+```bash
+# Vercel CLI ile
+npm i -g vercel
+vercel login
+vercel  # ilk deployment
+vercel --prod  # production deployment
+
+# veya GitHub integration kullan (önerilen)
+```
+
+### 3. Environment Variables (Vercel Dashboard)
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxx...
+SUPABASE_SERVICE_ROLE_KEY=eyJxxx...
+```
+
+## GİTIGNORE
+```
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build
+frontend/.next/
+frontend/out/
+.vercel/
+
+# Database
+backend/*.sqlite
+backend/*.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+```
+
+## KOD İNCELEME CHECKLİSTİ
+
+Kod yazmadan önce kendine sor:
+- [ ] Server Component mı Client Component mı kullanmalıyım?
+- [ ] Error handling var mı?
+- [ ] Input validation yaptım mı?
+- [ ] Türkçe UI metinleri doğru mu?
+- [ ] Environment variable'lar güvenli mi?
+- [ ] SQL injection riski var mı?
+- [ ] Performance optimizasyonu gerekli mi?
+- [ ] Soft delete kullanıyor muyum?
+- [ ] TypeScript tipler doğru mu? (gelecekte)
+- [ ] Mobile responsive mı?
+
+## YARDIMCI KOMUTLAR
+
+```bash
+# Git workflow
+git checkout -b feature/new-feature
+git add .
+git commit -m "feat: add new feature"
+git push origin feature/new-feature
+
+# Database migration
+supabase migration new migration_name
+supabase db push
+
+# Vercel
+vercel env pull  # env variables'ları local'e çek
+vercel logs      # production logs
+
+# Package updates
+npm outdated
+npm update
+```
+
+## SON NOTLAR
+
+1. **Consistency:** Mevcut kod stiline uy, yeni pattern oluşturma
+2. **Documentation:** Karmaşık logic'lere yorum ekle (Türkçe veya İngilizce)
+3. **Performance First:** Optimization düşünerek kod yaz
+4. **User Experience:** Türkçe error mesajları, loading states, success feedbacks
+5. **Security:** Hiçbir zaman client'ta API key gösterme, hassas işlemleri server-side yap
+
+Bu kuralları takip ederek temiz, güvenli ve sürdürülebilir kod yaz!
