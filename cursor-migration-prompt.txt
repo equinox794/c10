@@ -1,0 +1,202 @@
+GÖREV: Mevcut Bioplant CRM projesini production-ready Vercel + Supabase yapısına migrate et.
+
+## MEVCUT DURUM
+- Backend: Express.js (backend/server.js) - 1728 satır, SQLite veritabanı
+- Frontend: Next.js 14 (frontend/ klasörü)
+- Database: SQLite (backend/database.sqlite)
+- Çalışma: Local (localhost:3001 backend, localhost:3000 frontend)
+
+## HEDEF YAPI
+- Frontend: Vercel'de deploy edilecek Next.js uygulaması
+- Backend: Vercel Serverless Functions (API Routes)
+- Database: Supabase PostgreSQL
+
+## YAPILACAK İŞLER
+
+### 1. DATABASE MIGRATION (Supabase)
+- backend/database.sqlite'daki tüm tabloları analiz et (customers, stock, recipes, orders, packages, settings, recipe_items vb.)
+- Supabase için SQL migration dosyası oluştur: `supabase/migrations/001_initial_schema.sql`
+- SQLite'ın tüm tablolarını, constraintlerini, indexlerini PostgreSQL formatına çevir
+- Seed data varsa `supabase/seed.sql` oluştur
+- Supabase setup için `supabase/.env.example` dosyası oluştur (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY)
+
+### 2. BACKEND REFACTORING (Serverless Functions)
+- backend/server.js'deki tüm Express route'ları Vercel API Routes formatına çevir
+- Her endpoint için ayrı dosya oluştur: `frontend/app/api/[endpoint]/route.js`
+- Örnek:
+  - GET/POST /api/customers → frontend/app/api/customers/route.js
+  - GET/PUT/DELETE /api/customers/[id] → frontend/app/api/customers/[id]/route.js
+  - /api/stock, /api/recipes, /api/orders vs. için aynı yapı
+- SQLite db.run, db.all, db.get yerine Supabase client kullan
+- Middleware'leri (cors, auth) Next.js API routes'a uyarla
+- PDF generation (pdfGenerator.js) ve file upload (multer) fonksiyonlarını serverless'a uyarla
+
+### 3. FRONTEND GÜNCELLEMELERİ
+- Frontend'deki tüm API çağrılarını kontrol et (process.env.NEXT_PUBLIC_API_ORIGIN kullanımı)
+- API çağrılarını relative path'e çevir (http://localhost:3001/api/customers → /api/customers)
+- Supabase real-time özelliklerini ekle (opsiyonel ama önerilir)
+- Environment variables'ı .env.local ve .env.example'a ekle
+
+### 4. YENİ KLASÖR YAPISI OLUŞTUR
+```
+/
+├── frontend/                    (mevcut frontend, ama güncellenmiş)
+│   ├── app/
+│   │   ├── api/                (YENİ - Backend routes buraya taşınacak)
+│   │   │   ├── customers/
+│   │   │   │   ├── route.js
+│   │   │   │   └── [id]/route.js
+│   │   │   ├── stock/
+│   │   │   │   ├── route.js
+│   │   │   │   └── [id]/route.js
+│   │   │   ├── recipes/
+│   │   │   ├── orders/
+│   │   │   ├── packages/
+│   │   │   ├── settings/
+│   │   │   └── ...
+│   │   └── (existing pages)
+│   ├── lib/
+│   │   └── supabase.js         (YENİ - Supabase client)
+│   ├── .env.local              (YENİ - local env vars)
+│   ├── .env.example            (YENİ - template)
+│   └── vercel.json             (YENİ - Vercel config)
+├── supabase/                   (YENİ KLASÖR)
+│   ├── migrations/
+│   │   └── 001_initial_schema.sql
+│   ├── seed.sql
+│   └── .env.example
+├── backend/                    (ESKİ - referans için kalsın, sonra silinebilir)
+└── README.md                   (GÜNCELLE - yeni setup talimatları)
+```
+
+### 5. SUPABASE CLIENT SETUP
+frontend/lib/supabase.js oluştur:
+```javascript
+import { createClient } from '@supabase/supabase-js'
+
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+)
+
+// Server-side için
+export const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
+```
+
+### 6. API ROUTE ÖRNEĞİ
+Mevcut Express route'u:
+```javascript
+app.get('/api/customers', async (req, res) => {
+  const customers = await dbAll('SELECT * FROM customers');
+  res.json(customers);
+});
+```
+
+Yeni Vercel API route'a çevir (frontend/app/api/customers/route.js):
+```javascript
+import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
+
+export async function GET(request) {
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*');
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
+export async function POST(request) {
+  const body = await request.json();
+  const { data, error } = await supabase
+    .from('customers')
+    .insert([body])
+    .select();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data[0]);
+}
+```
+
+TÜM backend/server.js route'ları için bu dönüşümü yap.
+
+### 7. PACKAGE.JSON GÜNCELLEMELERİ
+frontend/package.json'a ekle:
+```json
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
+```
+
+### 8. ENVIRONMENT FILES
+.env.example oluştur:
+```
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your-project-url.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Vercel (otomatik ayarlanır)
+VERCEL_URL=
+```
+
+### 9. VERCEL.JSON
+vercel.json oluştur:
+```json
+{
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "framework": "nextjs",
+  "regions": ["iad1"]
+}
+```
+
+### 10. README.md GÜNCELLE
+Yeni setup adımlarını ekle:
+- Supabase projesi nasıl oluşturulur
+- Environment variables nasıl ayarlanır
+- Vercel'e nasıl deploy edilir
+- Migration nasıl çalıştırılır
+
+### 11. DEPLOYMENT DOKÜMANI
+DEPLOYMENT.md oluştur ve şunları açıkla:
+1. Supabase projesi oluşturma
+2. Migrations çalıştırma (Supabase Dashboard veya CLI)
+3. Vercel'e GitHub repo bağlama
+4. Environment variables ayarlama
+5. Deploy yapma
+
+### 12. ÖZEL DURUMLAR
+- PDF generation: pdfkit'i serverless function'da kullan, gerekirse edge-compatible alternatif bul
+- File upload: Vercel Blob Storage veya Supabase Storage kullan
+- Excel import/export: xlsx kütüphanesini API route'da kullan
+- Long-running tasks varsa: Vercel'in 10 saniye limiti var, uzun işlemler için background job sistemi öner
+
+## ÖNEMLI NOTLAR
+1. Tüm SQLite sorguları PostgreSQL'e uyumlu olmalı (DATETIME → TIMESTAMP, AUTOINCREMENT → SERIAL vb.)
+2. Transaction kullanımlarını PostgreSQL formatına çevir
+3. Error handling ekle (Supabase error responses)
+4. CORS ayarları Next.js API routes'da gerekli değil
+5. Tüm hassas bilgiler environment variables'da olmalı
+
+## SON ADIMLAR
+1. Tüm değişiklikleri test et
+2. Migration guide oluştur
+3. .gitignore güncelle (.env.local, .vercel, .supabase vb.)
+4. Git commit ve push yap
+5. Kullanıcıya deploy talimatları ver
+
+## OUTPUT
+İşlem bittiğinde bana şunları ver:
+1. ✅ Tamamlanan görevler listesi
+2. 📝 Supabase migration SQL dosyası
+3. 📝 Deployment adımları (step-by-step)
+4. 📝 Environment variables listesi
+5. ⚠️ Manuel yapılması gereken işlemler (Supabase proje oluşturma vb.)
+
+Başla ve tüm migration işlemini tamamla. Her adımı açıkla ve ilerlemeyi raporla.
