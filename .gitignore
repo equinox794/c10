@@ -37,7 +37,18 @@ Thumbs.db
 /build
 /dist
 .cache/
+out/
+
+# Vercel
+.vercel
+.vercel/
+
+# Supabase
+.supabase/
 
 # Temporary files
 *.tmp
 *.temp
+
+# Uploads
+uploads/
