@@ -33,6 +33,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
+type ExcelRow = {
+  ID?: string | number;
+  urun_adi?: string;
+  miktar?: number | string;
+  birim?: string;
+  fiyat?: number | string;
+  stok_turu?: string;
+  kritik_stok_miktari?: number | string;
+};
+
 const StockManagement = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -122,12 +132,12 @@ const StockManagement = () => {
         const workbook = XLSX.read(data, { type: 'binary' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        const jsonData = XLSX.utils.sheet_to_json<ExcelRow>(worksheet);
 
         console.log('Excel verisi:', jsonData); // Debug için
 
         // Excel verilerini Stock formatına dönüştür
-        const stockData = jsonData.map((item: any) => {
+        const stockData = jsonData.map((item) => {
           console.log('İşlenen satır:', item); // Debug için
           return {
             name: item.urun_adi || '',  // Zorunlu alan
